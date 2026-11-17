@@ -29,7 +29,7 @@ except RuntimeError:
     loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
-# Pyrogram ക്ലയന്റ് initialization
+# Pyrogram ക്라이언트 initialization
 app = Client(
     "zee5_bot",
     api_id=API_ID,
@@ -52,7 +52,7 @@ def get_video_duration(file_path):
 # പ്രോഗ്രസ് ബാർ ഉണ്ടാക്കാൻ
 def get_progress_bar(percentage):
     try:
-        pct = float(str(percentage).replace('%', '').strip())
+        pct = float(percentage.replace('%', '').strip())
     except:
         pct = 0.0
     completed = int(pct // 10)
@@ -86,7 +86,7 @@ def get_progress_hook(client, message, title="Downloading"):
                 last_update_time = current_time
     return progress_hook
 
-# യൂസർ സെറ്റിംഗ്സ് കീബോർഡ്
+# യൂസർ സെറ്റിംഗ്സ് കീബോർഡ് (തംബ്‌നെയിൽ മാനേജ്‌മെന്റ്)
 def build_user_settings_keyboard(user_id):
     has_thumb = "Yes ✅" if user_id in USER_THUMBNAILS else "No ❌"
     return InlineKeyboardMarkup([
@@ -99,9 +99,8 @@ def build_user_settings_keyboard(user_id):
 @app.on_message(filters.command("start") & filters.private)
 async def start_command(client, message):
     await message.reply_text(
-        "👋 Hello! Welcome to Zee5 Downloader Bot.\n\n"
-        "Send any Zee5 link with `-n custom_name` for renaming, and download as Audio or Video!",
-        reply_markup=build_user_settings_keyboard(message.from_user.id)
+        "👋 Hello! ഞാൻ ഒരു Zee5 (സീഫൈ) വീഡിയോ ഡൗൺലോഡ് ചെയ്യാനുള്ള ബോട്ട് ആണ്.\n\n"
+        "Zee5 ലിങ്കിനൊപ്പം `-n custom_name` നൽകി നിങ്ങൾക്ക് ആവശ്യമുള്ള ക്വാളിറ്റിയിൽ ഡൗൺലോഡ് ചെയ്യാവുന്നതാണ്!"
     )
 
 # /settings കമാൻഡ്
@@ -134,13 +133,10 @@ async def settings_callback(client, callback_query: CallbackQuery):
             await callback_query.answer("🗑️ Custom thumbnail removed successfully!", show_alert=True)
         else:
             await callback_query.answer("❌ No custom thumbnail to remove!", show_alert=True)
-        try:
-            await callback_query.message.edit_reply_markup(reply_markup=build_user_settings_keyboard(user_id))
-        except:
-            pass
+        await callback_query.message.edit_reply_markup(reply_markup=build_user_settings_keyboard(user_id))
     await callback_query.answer()
 
-# ഫോട്ടോയോ ലിങ്കോ ഇൻപുട്ട് എടുക്കുന്ന ഹാൻഡ്‌ലർ
+# ഫോട്ടോയോ Zee5 ലിങ്കോ ഇൻപുട്ട് എടുക്കുന്ന ഹാൻഡ്‌ലർ
 @app.on_message(filters.private & ~filters.command(["start", "settings"]))
 async def handle_user_inputs(client, message):
     user_id = message.from_user.id
@@ -156,6 +152,7 @@ async def handle_user_inputs(client, message):
         return
 
     text = message.text.strip() if message.text else ""
+    # Zee5 ലിങ്ക് തിരിച്ചറിയാൻ പരിശോധിക്കുന്നു
     if "zee5.com" in text:
         parts = text.split("-n")
         url = parts[0].strip()
@@ -163,21 +160,15 @@ async def handle_user_inputs(client, message):
 
         USER_URLS[user_id] = {"url": url, "custom_name": custom_name}
         
+        # ക്വാളിറ്റി തിരഞ്ഞെടുക്കാനുള്ള ബട്ടണുകൾ
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🎵 Extract MP3 Audio", callback_data="dl|audio|mp3")],
-            [
-                InlineKeyboardButton("📹 144p", callback_data="dl|video|144"),
-                InlineKeyboardButton("📹 240p", callback_data="dl|video|240")
-            ],
             [
                 InlineKeyboardButton("📹 360p", callback_data="dl|video|360"),
                 InlineKeyboardButton("📹 480p", callback_data="dl|video|480")
             ],
             [
-                InlineKeyboardButton("📹 576p", callback_data="dl|video|576"),
-                InlineKeyboardButton("📹 720p", callback_data="dl|video|720")
-            ],
-            [
+                InlineKeyboardButton("📹 720p", callback_data="dl|video|720"),
                 InlineKeyboardButton("📹 1080p", callback_data="dl|video|1080")
             ]
         ])
@@ -204,7 +195,7 @@ async def download_media(client, callback_query: CallbackQuery):
     custom_name = user_data["custom_name"]
 
     if media_type == "audio":
-        status_msg = await callback_query.message.edit_text("🎵 Extracting MP3 audio... Please wait...")
+        status_msg = await callback_query.message.edit_text("🎵 Extracting MP3 audio from Zee5... Please wait...")
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': 'downloads/%(title)s.%(ext)s',
@@ -214,21 +205,20 @@ async def download_media(client, callback_query: CallbackQuery):
                 'preferredquality': '192',
             }],
             'progress_hooks': [get_progress_hook(client, status_msg, "Downloading Audio")],
-            'geo_bypass': True,
         }
     else:
-        status_msg = await callback_query.message.edit_text(f"📥 Downloading {quality}p video... Please wait...")
+        status_msg = await callback_query.message.edit_text(f"📥 Downloading Zee5 {quality}p video... Please wait...")
         ydl_opts = {
-            'format': f'best[height<={quality}]/best',
+            'format': f'best[height<={quality}]/bestvideo[height<={quality}]+bestaudio/best',
             'outtmpl': 'downloads/%(title)s.%(ext)s',
             'progress_hooks': [get_progress_hook(client, status_msg, f"Downloading {quality}p Video")],
-            'geo_bypass': True,
         }
 
-    # cookies.txt ഫയൽ ഉണ്ടെങ്കിൽ അത് കോൺഫിഗറേഷനിൽ ചേർക്കുന്നു
+    # Zee5 പ്രീമിയം കంటെന്റുകൾ ഡൗൺലോഡ് ചെയ്യാൻ cookies.txt അത്യാവശ്യമാണ്
     if os.path.exists("cookies.txt"):
         ydl_opts['cookiefile'] = "cookies.txt"
 
+    thumb_path = None
     filename = None
     try:
         os.makedirs("downloads", exist_ok=True)
@@ -240,32 +230,34 @@ async def download_media(client, callback_query: CallbackQuery):
                 filename = os.path.splitext(filename)[0] + ".mp3"
 
         if not filename or not os.path.exists(filename):
-            raise Exception("Downloaded file not found!")
+            files = [os.path.join("downloads", f) for f in os.listdir("downloads")]
+            if files:
+                filename = max(files, key=os.path.getctime)
 
+        # കസ്റ്റം പേര് നൽകിയിട്ടുണ്ടെങ്കിൽ ഫയൽ റീനെയിം ചെയ്യുക
         dir_name, orig_filename = os.path.split(filename)
         name_part, ext = os.path.splitext(orig_filename)
         
         if custom_name:
             new_filename = os.path.join(dir_name, f"{custom_name}{ext}")
-            os.rename(filename, new_filename)
+            if os.path.exists(filename):
+                os.rename(filename, new_filename)
             filename = new_filename
 
         await status_msg.edit_text("📤 Uploading to Telegram...")
-
-        thumb_path = None
-        if user_id in USER_THUMBNAILS and os.path.exists(USER_THUMBNAILS[user_id]):
-            thumb_path = USER_THUMBNAILS[user_id]
 
         if media_type == "audio":
             await client.send_audio(
                 chat_id=callback_query.message.chat.id,
                 audio=filename,
-                thumb=thumb_path,
                 caption="🎵 Here is your Zee5 MP3 Audio!"
             )
         else:
             file_name = os.path.basename(filename)
             duration = get_video_duration(filename)
+            
+            if user_id in USER_THUMBNAILS and os.path.exists(USER_THUMBNAILS[user_id]):
+                thumb_path = USER_THUMBNAILS[user_id]
 
             await client.send_video(
                 chat_id=callback_query.message.chat.id,
@@ -278,15 +270,12 @@ async def download_media(client, callback_query: CallbackQuery):
 
         await status_msg.delete()
         
-        if os.path.exists(filename):
+        if filename and os.path.exists(filename):
             os.remove(filename)
 
     except Exception as e:
-        try:
-            await status_msg.edit_text(f"❌ Download failed: {str(e)}")
-        except:
-            pass
+        await status_msg.edit_text(f"❌ Download failed: {str(e)}")
 
 if __name__ == "__main__":
-    print("Bot is running...")
+    print("Zee5 Bot is running...")
     app.run()
